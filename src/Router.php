@@ -59,20 +59,45 @@ class Router
      */
     public function match(string $route, KeyValueStorage $routes): string
     {
-        $route = strtolower(trim(rtrim($route, '/')));
+        $route = strtolower(rtrim(trim($route), '/'));
 
         // If empty, homepage is expected.
         if (empty($route)) {
             return $this->home;
         }
 
+        // Quick check for non-regex routes.
+        if ($routes->has($route)) {
+            $controller = $routes->get($route);
+
+            if (!class_exists($controller, true)) {
+                throw new RuntimeException('Class ' . $controller . ' could not be found.');
+            }
+
+            if (!is_subclass_of($controller, Controller::class, true)) {
+                throw new RuntimeException($controller . ' does not implement ' . Controller::class);
+            }
+
+            return $controller;
+        }
+
+        // Slow check, for regex routes.
         foreach ($routes as $matcher => $controller) {
-            // It's a route regex:
-            if (preg_match('/^\/\^.+\$\/$/', $matcher) === 1) {
-                if (preg_match($matcher, $route) === 1 && is_subclass_of($controller, Controller::class, true)) {
-                    return $controller;
+            // Not a regex route, skip.
+            if (preg_match('/^\/\^.+\$\/$/', $matcher) !== 1) {
+                continue;
+            }
+
+            // Found regex match.
+            if (preg_match($matcher, $route) === 1) {
+                if (!class_exists($controller, true)) {
+                    throw new RuntimeException('Class ' . $controller . ' could not be found.');
                 }
-            } elseif ($matcher === $route && is_subclass_of($controller, Controller::class, true)) {
+
+                if (!is_subclass_of($controller, Controller::class, true)) {
+                    throw new RuntimeException($controller . ' does not implement ' . Controller::class);
+                }
+
                 return $controller;
             }
         }
