@@ -4,6 +4,7 @@ namespace Devorto\Routing;
 
 use Devorto\KeyValueStorage\KeyValueStorage;
 use InvalidArgumentException;
+use RuntimeException;
 
 /**
  * Class Router
